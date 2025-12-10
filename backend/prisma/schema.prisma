@@ -12,14 +12,17 @@ datasource db {
 
 // 用户表
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String   // bcrypt 加密后的密码
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  password     String    // bcrypt 加密后的密码
+  name         String?
+  role         String    @default("user") // "user" | "vip" | "vvip" | "admin"
+  vipExpireAt  DateTime? // VIP 到期时间 (V2 使用)
+  vvipExpireAt DateTime? // VVIP 到期时间 (V2 使用)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   
-  words     Word[]
+  words        Word[]
 }
 
 // 单词表
