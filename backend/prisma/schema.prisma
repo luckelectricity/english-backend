@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // bcrypt 加密后的密码
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  words     Word[]
+}
+
+// 单词表
+model Word {
+  id        Int      @id @default(autoincrement())
+  text      String    
+  userId    Int       
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contexts  Context[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([text, userId]) // 同一用户的单词不重复
+  @@index([userId])
+}
+
+// 语境表 (每次出现的句子)
+model Context {
+  id        Int      @id @default(autoincrement())
+  sentence  String   // 原句
+  meaning   String   // AI 分析的释义
+  sourceUrl String?  // 来源 URL (可选)
+  wordId    Int      
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@index([wordId])
+}
+
+// 牛津3000词表 (用于进度追踪)
+model OxfordWord {
+  id           Int    @id @default(autoincrement())
+  text         String
+  partOfSpeech String // 词性: noun, verb, adjective 等
+  level        String // A1, A2, B1, B2
+  rank         Int    // 词频排名
+  
+  @@unique([text, partOfSpeech]) // 同一单词不同词性分开存储
+  @@index([level])
+}
