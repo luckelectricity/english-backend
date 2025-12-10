@@ -3,7 +3,16 @@ import {
     UnauthorizedException,
     ConflictException,
     Logger,
+    HttpException,
+    HttpStatus,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { RateLimitService } from './rate-limit.service';
+import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -17,6 +26,8 @@ export class AuthService {
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
+        private configService: ConfigService,
+        private rateLimitService: RateLimitService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -63,8 +74,52 @@ export class AuthService {
         };
     }
 
-    async login(dto: LoginDto) {
-        this.logger.log(`登录请求: ${dto.email}`);
+    async login(dto: LoginDto, ip: string) {
+        this.logger.log(`登录请求: ${dto.email} (来自 IP: ${ip})`);
+
+        // 检查频率限制
+        const rateLimit = this.rateLimitService.checkRateLimit(ip);
+        if (!rateLimit.allowed) {
+            throw new HttpException(
+                {
+                    statusCode: HttpStatus.TOO_MANY_REQUESTS,
+                    message: `登录失败次数过多,请 ${rateLimit.remainingTime} 秒后再试`,
+                    remainingTime: rateLimit.remainingTime,
+                },
+                HttpStatus.TOO_MANY_REQUESTS,
+            );
+        }
+
+        // 检查是否是管理员登录
+        const adminEmail = this.configService.get('ADMIN_EMAIL');
+        const adminPassword = this.configService.get('ADMIN_PASSWORD');
+
+        if (dto.email === adminEmail) {
+            this.logger.log(`管理员登录尝试: ${dto.email}`);
+
+            if (dto.password !== adminPassword) {
+                this.logger.warn(`管理员登录失败: 密码错误 - ${dto.email}`);
+                this.rateLimitService.recordFailedAttempt(ip);
+                throw new UnauthorizedException('邮箱或密码错误');
+            }
+
+            // 管理员登录成功
+            this.rateLimitService.resetAttempts(ip);
+            const token = this.generateToken(0, adminEmail); // ID 为 0 表示管理员
+
+            this.logger.log(`管理员登录成功: ${adminEmail}`);
+
+            return {
+                user: {
+                    id: 0,
+                    email: adminEmail,
+                    name: 'Admin',
+                    role: 'admin',
+                    createdAt: new Date(),
+                },
+                token,
+            };
+        }
 
         // 查询用户
         const user = await this.prisma.user.findUnique({
@@ -81,6 +136,7 @@ export class AuthService {
 
         if (!user) {
             this.logger.warn(`登录失败: 用户不存在 - ${dto.email}`);
+            this.rateLimitService.recordFailedAttempt(ip);
             throw new UnauthorizedException('邮箱或密码错误');
         }
 
@@ -89,8 +145,12 @@ export class AuthService {
 
         if (!isPasswordValid) {
             this.logger.warn(`登录失败: 密码错误 - ${dto.email}`);
+            this.rateLimitService.recordFailedAttempt(ip);
             throw new UnauthorizedException('邮箱或密码错误');
         }
+
+        // 登录成功,重置失败计数
+        this.rateLimitService.resetAttempts(ip);
 
         // 生成 JWT Token
         const token = this.generateToken(user.id, user.email);

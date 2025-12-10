@@ -6,11 +6,17 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
+  // 信任代理 (Cloudflare + Nginx)
+  app.set('trust proxy', true);
+
   // 全局验证管道
   app.useGlobalPipes(new ValidationPipe());
 
   // 启用 CORS
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true,
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

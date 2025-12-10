@@ -1,98 +1,116 @@
+# English Learning Backend
+
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS" />
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+基于 NestJS 的英语学习后端 API,支持单词管理、AI 智能分析和进度追踪。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## ✨ 功能特性
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- 🔐 **用户认证** - JWT + 角色权限控制 (USER/VIP/VVIP/ADMIN)
+- 📚 **单词管理** - 智能查重、多语境保存
+- 🤖 **AI 分析** - DeepSeek 集成,根据语境生成释义
+- 📊 **进度追踪** - 牛津3000词学习进度
+- 🛡️ **安全防护** - 登录频率限制、IP 追踪
+- 📝 **完整日志** - 操作审计和错误追踪
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## 🚀 快速开始
 
-## Compile and run the project
+### 前置要求
+
+- Docker & Docker Compose
+- Node.js 20+ (开发环境)
+
+### 本地开发
 
 ```bash
-# development
-$ npm run start
+# 1. 克隆项目
+git clone https://github.com/yourusername/english-backend.git
+cd english-backend
 
-# watch mode
-$ npm run start:dev
+# 2. 安装依赖
+npm install
 
-# production mode
-$ npm run start:prod
+# 3. 配置环境变量
+cp .env.example .env
+# 编辑 .env 填写配置
+
+# 4. 数据库迁移
+npx prisma migrate dev
+
+# 5. 导入牛津3000词
+node scripts/scrape-oxford-3000.js
+node scripts/import-oxford-3000.js
+
+# 6. 启动开发服务器
+npm run start:dev
 ```
 
-## Run tests
+### Docker 部署
 
 ```bash
-# unit tests
-$ npm run test
+# 1. 配置环境变量
+cp .env.production.example .env.production
+# 编辑 .env.production
 
-# e2e tests
-$ npm run test:e2e
+# 2. 启动服务
+docker-compose --env-file .env.production up -d
 
-# test coverage
-$ npm run test:cov
+# 3. 查看日志
+docker-compose logs -f backend
 ```
 
-## Deployment
+详细部署文档: [GitHub 部署指南](docs/GITHUB_DEPLOYMENT.md)
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 📋 API 文档
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+### 认证相关
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- `POST /auth/register` - 用户注册
+- `POST /auth/login` - 用户登录
+- `GET /auth/profile` - 获取当前用户信息
 
-## Resources
+### 单词管理
 
-Check out a few resources that may come in handy when working with NestJS:
+- `POST /words` - 保存单词
+- `GET /words` - 获取生词本
+- `DELETE /words/:id` - 删除单词
+- `GET /words/oxford-progress` - 牛津词进度
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### AI 功能 (VIP+)
 
-## Support
+- `POST /ai/analyze` - AI 单词分析
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 管理员 (ADMIN)
 
-## Stay in touch
+- `GET /admin/users` - 查询所有用户
+- `PATCH /admin/users/role` - 修改用户角色
+- `GET /admin/stats` - 系统统计
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## 📖 文档
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- [Docker 部署](docs/DOCKER_DEPLOYMENT.md)
+- [GitHub 部署](docs/GITHUB_DEPLOYMENT.md)
+- [Nginx Proxy Manager](docs/NGINX_PROXY_MANAGER.md)
+- [Cloudflare 配置](docs/CLOUDFLARE_NGINX_SETUP.md)
+- [管理员指南](docs/ADMIN_GUIDE.md)
+- [安全配置](docs/ADMIN_SECURITY.md)
+- [日志系统](docs/LOGGING.md)
+
+---
+
+## 📄 License
+
+MIT License
