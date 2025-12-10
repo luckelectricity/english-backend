@@ -2,6 +2,7 @@ import {
     Injectable,
     UnauthorizedException,
     ConflictException,
+    Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,18 +12,23 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+    private readonly logger = new Logger(AuthService.name);
+
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
     ) { }
 
     async register(dto: RegisterDto) {
+        this.logger.log(`注册请求: ${dto.email}`);
+
         // 检查邮箱是否已存在
         const existingUser = await this.prisma.user.findUnique({
             where: { email: dto.email },
         });
 
         if (existingUser) {
+            this.logger.warn(`注册失败: 邮箱已存在 - ${dto.email}`);
             throw new ConflictException('邮箱已被注册');
         }
 
@@ -49,6 +55,8 @@ export class AuthService {
         // 生成 JWT Token
         const token = this.generateToken(user.id, user.email);
 
+        this.logger.log(`用户注册成功: ${user.email} (ID: ${user.id})`);
+
         return {
             user,
             token,
@@ -56,6 +64,8 @@ export class AuthService {
     }
 
     async login(dto: LoginDto) {
+        this.logger.log(`登录请求: ${dto.email}`);
+
         // 查询用户
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
@@ -70,6 +80,7 @@ export class AuthService {
         });
 
         if (!user) {
+            this.logger.warn(`登录失败: 用户不存在 - ${dto.email}`);
             throw new UnauthorizedException('邮箱或密码错误');
         }
 
@@ -77,11 +88,14 @@ export class AuthService {
         const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
         if (!isPasswordValid) {
+            this.logger.warn(`登录失败: 密码错误 - ${dto.email}`);
             throw new UnauthorizedException('邮箱或密码错误');
         }
 
         // 生成 JWT Token
         const token = this.generateToken(user.id, user.email);
+
+        this.logger.log(`用户登录成功: ${user.email} (ID: ${user.id}, Role: ${user.role})`);
 
         return {
             user: {
