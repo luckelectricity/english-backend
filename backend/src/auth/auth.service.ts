@@ -59,6 +59,14 @@ export class AuthService {
         // 查询用户
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
+            select: {
+                id: true,
+                email: true,
+                password: true,
+                name: true,
+                role: true,
+                createdAt: true,
+            },
         });
 
         if (!user) {
