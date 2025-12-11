@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { wordApi } from '@/lib/api'
+import { speak } from '@/lib/speech'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import WordWithPhonetic from '@/components/WordWithPhonetic'
 import type { Word, Context } from '@/types'
-import { ChevronLeft, ChevronRight, RotateCcw, Shuffle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RotateCcw, Shuffle, Volume2 } from 'lucide-react'
 
 interface ReviewCard {
     word: string
@@ -145,6 +147,17 @@ export default function Review() {
                                 <div className="text-2xl leading-relaxed">
                                     {getBlankSentence(currentCard.context.sentence, currentCard.word)}
                                 </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        speak(currentCard.context.sentence, 'en-US')
+                                    }}
+                                >
+                                    <Volume2 className="mr-2 h-4 w-4" />
+                                    朗读句子
+                                </Button>
                                 <div className="text-sm text-muted-foreground">
                                     点击查看答案
                                 </div>
@@ -162,13 +175,29 @@ export default function Review() {
                                 <div className="text-sm text-muted-foreground uppercase tracking-wide">
                                     答案
                                 </div>
-                                <div className="text-5xl font-bold text-primary">{currentCard.word}</div>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <WordWithPhonetic word={currentCard.word} />
+                                </div>
                                 <div className="text-xl text-muted-foreground">
                                     {currentCard.context.meaning}
                                 </div>
-                                <div className="pt-4 border-t">
+                                <div className="pt-4 border-t w-full">
                                     <div className="text-sm text-muted-foreground mb-2">完整句子：</div>
-                                    <div className="text-lg">{currentCard.context.sentence}</div>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className="text-lg flex-1 text-center">{currentCard.context.sentence}</div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 flex-shrink-0"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                speak(currentCard.context.sentence, 'en-US')
+                                            }}
+                                            title="朗读句子"
+                                        >
+                                            <Volume2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>

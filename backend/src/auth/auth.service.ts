@@ -65,7 +65,7 @@ export class AuthService {
 
         return {
             user,
-            token,
+            access_token: token,
         };
     }
 
@@ -112,7 +112,7 @@ export class AuthService {
                     role: 'admin',
                     createdAt: new Date(),
                 },
-                token,
+                access_token: token,
             };
         }
 
@@ -160,7 +160,7 @@ export class AuthService {
                 role: user.role,
                 createdAt: user.createdAt,
             },
-            token,
+            access_token: token,
         };
     }
 

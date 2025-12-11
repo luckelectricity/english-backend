@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { wordApi } from '@/lib/api'
+import { speak } from '@/lib/speech'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,8 +21,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import WordWithPhonetic from '@/components/WordWithPhonetic'
 import type { Word } from '@/types'
-import { Plus, Trash2, ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronUp, Search, Volume2 } from 'lucide-react'
 
 export default function WordList() {
     const [words, setWords] = useState<Word[]>([])
@@ -175,7 +177,7 @@ export default function WordList() {
                                                     ) : (
                                                         <ChevronDown className="h-4 w-4" />
                                                     )}
-                                                    {word.text}
+                                                    <WordWithPhonetic word={word.text} />
                                                 </div>
                                             </TableCell>
                                             <TableCell>{word.contexts.length} 个</TableCell>
@@ -202,7 +204,18 @@ export default function WordList() {
                                                                 key={ctx.id}
                                                                 className="pl-4 border-l-2 border-primary space-y-1"
                                                             >
-                                                                <div className="text-sm">{ctx.sentence}</div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="text-sm flex-1">{ctx.sentence}</div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 flex-shrink-0"
+                                                                        onClick={() => speak(ctx.sentence, 'en-US')}
+                                                                        title="朗读例句"
+                                                                    >
+                                                                        <Volume2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
                                                                 <div className="text-sm text-muted-foreground">
                                                                     释义：{ctx.meaning}
                                                                 </div>
