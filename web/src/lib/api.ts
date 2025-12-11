@@ -109,8 +109,19 @@ export const wordApi = {
 }
 
 export const aiApi = {
-    expand: async (word: string, sentence: string): Promise<import('@/types').AiExpandResponse> => {
-        const { data } = await api.post<import('@/types').AiExpandResponse>('/ai/expand', { word, sentence })
+    expand: async (word: string, sentence: string, contextId?: number): Promise<import('@/types').AiExpandResponse> => {
+        const { data } = await api.post<import('@/types').AiExpandResponse>('/ai/expand', { word, sentence, contextId })
+        return data
+    }
+}
+
+export const adminApi = {
+    getUsers: async (): Promise<any[]> => {
+        const { data } = await api.get('/admin/users')
+        return data
+    },
+    updateRole: async (email: string, role: string): Promise<any> => {
+        const { data } = await api.patch('/admin/users/role', { email, role })
         return data
     }
 }

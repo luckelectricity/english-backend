@@ -22,8 +22,8 @@ export class AiController {
     @Post('expand')
     @Roles(Role.VIP, Role.VVIP, Role.ADMIN)
     async expandWord(
-        @Body() body: { word: string; sentence: string },
+        @Body() body: { word: string; sentence: string; contextId?: number },
     ) {
-        return this.aiService.expandTutor(body.word, body.sentence);
+        return this.aiService.expandTutor(body.word, body.sentence, body.contextId);
     }
 }

@@ -7,6 +7,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import WordList from './pages/WordList'
 import Review from './pages/Review'
+import AdminUserList from './pages/AdminUserList'
 
 function App() {
   const token = useAuthStore((state) => state.token)
@@ -36,6 +37,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="words" element={<WordList />} />
           <Route path="review" element={<Review />} />
+          <Route path="admin/users" element={<AdminUserList />} />
         </Route>
 
         {/* 404 */}

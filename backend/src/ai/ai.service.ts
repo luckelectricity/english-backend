@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 import OpenAI from 'openai';
 
 @Injectable()
@@ -7,7 +8,10 @@ export class AiService {
     private readonly logger = new Logger(AiService.name);
     private readonly openai: OpenAI;
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private configService: ConfigService,
+        private prisma: PrismaService,
+    ) {
         this.openai = new OpenAI({
             apiKey: this.configService.get('DEEPSEEK_API_KEY'),
             baseURL: this.configService.get('DEEPSEEK_API_URL'),
@@ -46,7 +50,23 @@ export class AiService {
         }
     }
 
-    async expandTutor(word: string, contextSentence: string): Promise<any> {
+    async expandTutor(word: string, contextSentence: string, contextId?: number): Promise<any> {
+        // 1. 尝试读取缓存
+        if (contextId) {
+            const context = await this.prisma.context.findUnique({
+                where: { id: contextId },
+                select: { aiExplanation: true }
+            });
+            if (context?.aiExplanation) {
+                this.logger.log(`命中 AI 缓存: ContextID ${contextId}`);
+                try {
+                    return JSON.parse(context.aiExplanation);
+                } catch (e) {
+                    this.logger.warn(`缓存 JSON 解析失败，重新生成: ${e.message}`);
+                }
+            }
+        }
+
         try {
             const response = await this.openai.chat.completions.create({
                 model: this.configService.get('DEEPSEEK_MODEL') || 'deepseek-v3-250324',
@@ -77,6 +97,16 @@ JSON 格式如下：
             const content = response.choices[0]?.message?.content?.trim();
             if (!content) {
                 throw new Error('AI 返回空结果');
+            }
+
+            // 2. 写入缓存
+            if (contextId) {
+                await this.prisma.context.update({
+                    where: { id: contextId },
+                    data: { aiExplanation: content }
+                }).catch(err => {
+                    this.logger.error(`写入 AI 缓存失败: ${err.message}`);
+                });
             }
 
             return JSON.parse(content);

@@ -45,6 +45,7 @@ model Context {
   id        Int      @id @default(autoincrement())
   sentence  String   // 原句
   meaning   String   // AI 分析的释义
+  aiExplanation String? // AI 详细解析 (JSON 缓存)
   sourceUrl String?  // 来源 URL (可选)
   wordId    Int      
   word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)

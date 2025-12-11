@@ -112,7 +112,7 @@ export default function WordList() {
         if (isFlipping && !aiContent[key] && !loadingAi[key]) {
             setLoadingAi(prev => ({ ...prev, [key]: true }))
             try {
-                const data = await aiApi.expand(word, sentence)
+                const data = await aiApi.expand(word, sentence, contextId)
                 setAiContent(prev => ({ ...prev, [key]: data }))
             } catch (error) {
                 console.error('AI 分析失败:', error)
@@ -177,13 +177,16 @@ export default function WordList() {
                             const isLoading = loadingAi[cardKey]
 
                             return (
-                                <div key={cardKey} className="relative h-[400px] w-full perspective-1000 group">
+                                <div
+                                    key={cardKey}
+                                    className="relative h-[400px] w-full perspective-1000 group"
+                                >
                                     <div
-                                        className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-sm rounded-xl border bg-card text-card-foreground ${isFlipped ? 'rotate-y-180' : ''
+                                        className={`relative w-full h-full transform-style-3d shadow-sm rounded-xl border bg-card text-card-foreground card-face-wrapper ${isFlipped ? 'flipped' : ''
                                             }`}
                                     >
                                         {/* 正面 */}
-                                        <div className="absolute w-full h-full backface-hidden flex flex-col p-6">
+                                        <div className={`absolute w-full h-full backface-hidden flex flex-col p-5 ${isFlipped ? 'pointer-events-none' : ''}`}>
                                             <div className="flex items-start justify-between mb-4">
                                                 <WordWithPhonetic
                                                     wordId={word.id}
@@ -204,10 +207,7 @@ export default function WordList() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setWordToDelete(word.id)
-                                                        }}
+                                                        onClick={() => setWordToDelete(word.id)}
                                                         title="删除单词"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -257,7 +257,7 @@ export default function WordList() {
                                         </div>
 
                                         {/* 背面 (AI 内容) */}
-                                        <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-6 bg-secondary/10 overflow-hidden">
+                                        <div className={`absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-5 bg-card overflow-hidden ${!isFlipped ? 'pointer-events-none' : ''}`}>
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2 text-primary font-medium">
                                                     <Sparkles className="h-4 w-4" />
