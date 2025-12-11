@@ -22,7 +22,6 @@ export class AppController {
     const oxfordCount = await this.prisma.oxfordWord.count();
 
     return {
-      status: 'ok',
       database: 'connected',
       stats: {
         users: userCount,
