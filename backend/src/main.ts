@@ -7,7 +7,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 信任代理 (Cloudflare + Nginx)
-  app.set('trust proxy', true);
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
 
   // 全局验证管道
   app.useGlobalPipes(new ValidationPipe());
