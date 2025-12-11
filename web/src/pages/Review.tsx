@@ -9,7 +9,9 @@ import type { Context } from '@/types'
 import { ChevronLeft, ChevronRight, RotateCcw, Shuffle, Volume2, Check, X } from 'lucide-react'
 
 interface ReviewCard {
+    wordId: number
     word: string
+    phonetic?: string | null
     context: Context
 }
 
@@ -44,7 +46,9 @@ export default function Review() {
             words.forEach((word) => {
                 word.contexts.forEach((context) => {
                     reviewCards.push({
+                        wordId: word.id,
                         word: word.text,
+                        phonetic: word.phonetic,
                         context,
                     })
                 })
@@ -209,7 +213,11 @@ export default function Review() {
                                         答案
                                     </div>
                                     <div onClick={(e) => e.stopPropagation()}>
-                                        <WordWithPhonetic word={currentCard.word} />
+                                        <WordWithPhonetic
+                                            wordId={currentCard.wordId}
+                                            word={currentCard.word}
+                                            phonetic={currentCard.phonetic}
+                                        />
                                     </div>
                                     <div className="text-xl text-muted-foreground">
                                         {currentCard.context.meaning}
@@ -299,7 +307,11 @@ export default function Review() {
                                         )}
                                         <div className="pt-4 border-t">
                                             <div className="text-sm text-muted-foreground mb-2">正确答案：</div>
-                                            <WordWithPhonetic word={currentCard.word} />
+                                            <WordWithPhonetic
+                                                wordId={currentCard.wordId}
+                                                word={currentCard.word}
+                                                phonetic={currentCard.phonetic}
+                                            />
                                             <div className="text-lg text-muted-foreground mt-2">
                                                 {currentCard.context.meaning}
                                             </div>

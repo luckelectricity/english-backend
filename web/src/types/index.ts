@@ -1,3 +1,4 @@
+export * from './ai'
 export interface User {
     id: number
     email: string
@@ -12,6 +13,7 @@ export interface User {
 export interface Word {
     id: number
     text: string
+    phonetic?: string | null
     userId: number
     createdAt: string
     updatedAt: string
@@ -32,6 +34,10 @@ export interface CreateWordDto {
     sentence: string
     meaning: string
     sourceUrl?: string
+}
+
+export interface UpdateWordDto {
+    phonetic?: string
 }
 
 export interface LoginDto {

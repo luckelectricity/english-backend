@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWordDto } from './dto/create-word.dto';
+import { UpdateWordDto } from './dto/update-word.dto';
 
 @Injectable()
 export class WordService {
@@ -146,4 +147,26 @@ export class WordService {
             byLevel: levelStats,
         };
     }
+
+    async updateWord(userId: number, wordId: number, dto: UpdateWordDto) {
+        // 验证单词属于当前用户
+        const word = await this.prisma.word.findUnique({
+            where: { id: wordId },
+        });
+
+        if (!word || word.userId !== userId) {
+            this.logger.warn(`更新单词失败: 无权限 (用户ID: ${userId}, 单词ID: ${wordId})`);
+            throw new Error('单词不存在或无权更新');
+        }
+
+        this.logger.log(`更新单词: ${word.text} (用户ID: ${userId})`);
+
+        return this.prisma.word.update({
+            where: { id: wordId },
+            data: {
+                phonetic: dto.phonetic,
+            },
+        });
+    }
 }
+

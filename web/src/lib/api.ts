@@ -6,6 +6,7 @@ import type {
     User,
     Word,
     CreateWordDto,
+    UpdateWordDto,
     OxfordProgress,
 } from '@/types'
 
@@ -100,6 +101,18 @@ export const wordApi = {
         const { data } = await api.get<OxfordProgress>('/words/oxford-progress')
         return data
     },
+
+    update: async (id: number, dto: UpdateWordDto): Promise<Word> => {
+        const { data } = await api.patch<Word>(`/words/${id}`, dto)
+        return data
+    },
+}
+
+export const aiApi = {
+    expand: async (word: string, sentence: string): Promise<import('@/types').AiExpandResponse> => {
+        const { data } = await api.post<import('@/types').AiExpandResponse>('/ai/expand', { word, sentence })
+        return data
+    }
 }
 
 export default api

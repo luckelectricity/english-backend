@@ -18,4 +18,12 @@ export class AiController {
         const meaning = await this.aiService.analyzeWord(body.word, body.sentence);
         return { word: body.word, meaning };
     }
+
+    @Post('expand')
+    @Roles(Role.VIP, Role.VVIP, Role.ADMIN)
+    async expandWord(
+        @Body() body: { word: string; sentence: string },
+    ) {
+        return this.aiService.expandTutor(body.word, body.sentence);
+    }
 }

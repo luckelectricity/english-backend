@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react'
-import { wordApi } from '@/lib/api'
+import { wordApi, aiApi } from '@/lib/api'
 import { speak } from '@/lib/speech'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
 import {
     Dialog,
     DialogContent,
@@ -23,14 +15,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import WordWithPhonetic from '@/components/WordWithPhonetic'
 import type { Word } from '@/types'
-import { Plus, Trash2, ChevronDown, ChevronUp, Search, Volume2 } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronUp, Search, Volume2, Sparkles, RotateCw, ArrowLeft } from 'lucide-react'
 
 export default function WordList() {
     const [words, setWords] = useState<Word[]>([])
     const [filteredWords, setFilteredWords] = useState<Word[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [isLoading, setIsLoading] = useState(true)
-    const [expandedWordId, setExpandedWordId] = useState<number | null>(null)
+
 
     // 添加单词对话框状态
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -41,6 +33,14 @@ export default function WordList() {
         sourceUrl: '',
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // 删除确认对话框
+    const [wordToDelete, setWordToDelete] = useState<number | null>(null)
+
+    // 翻转卡片和 AI 内容状态
+    const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({}) // key: wordId-contextId
+    const [aiContent, setAiContent] = useState<Record<string, import('@/types').AiExpandResponse>>({})
+    const [loadingAi, setLoadingAi] = useState<Record<string, boolean>>({})
 
     useEffect(() => {
         loadWords()
@@ -90,19 +90,39 @@ export default function WordList() {
         }
     }
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('确定要删除这个单词吗？')) return
+    const confirmDelete = async () => {
+        if (!wordToDelete) return
 
         try {
-            await wordApi.delete(id)
+            await wordApi.delete(wordToDelete)
             await loadWords()
+            setWordToDelete(null)
         } catch (error) {
             alert('删除失败，请稍后重试')
         }
     }
 
-    const toggleExpand = (wordId: number) => {
-        setExpandedWordId(expandedWordId === wordId ? null : wordId)
+    const handleFlip = async (wordId: number, contextId: number, word: string, sentence: string) => {
+        const key = `${wordId}-${contextId}`
+        const isFlipping = !flippedCards[key]
+
+        setFlippedCards(prev => ({ ...prev, [key]: isFlipping }))
+
+        // 如果翻转到背面且没有 AI 内容，则请求 AI
+        if (isFlipping && !aiContent[key] && !loadingAi[key]) {
+            setLoadingAi(prev => ({ ...prev, [key]: true }))
+            try {
+                const data = await aiApi.expand(word, sentence)
+                setAiContent(prev => ({ ...prev, [key]: data }))
+            } catch (error) {
+                console.error('AI 分析失败:', error)
+                // 出错时翻转回来并在之后显示错误提示（这里简化处理）
+                setFlippedCards(prev => ({ ...prev, [key]: false }))
+                alert('获取 AI 解析失败，请稍后重试')
+            } finally {
+                setLoadingAi(prev => ({ ...prev, [key]: false }))
+            }
+        }
     }
 
     if (isLoading) {
@@ -142,109 +162,164 @@ export default function WordList() {
                 </span>
             </div>
 
-            {/* 单词列表 */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>单词列表</CardTitle>
-                    <CardDescription>点击单词查看所有语境</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {filteredWords.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            {searchQuery ? '没有找到匹配的单词' : '还没有添加单词，点击上方按钮开始添加'}
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>单词</TableHead>
-                                    <TableHead>语境数量</TableHead>
-                                    <TableHead>添加时间</TableHead>
-                                    <TableHead className="text-right">操作</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredWords.map((word) => (
-                                    <>
-                                        <TableRow key={word.id} className="cursor-pointer hover:bg-muted/50">
-                                            <TableCell
-                                                className="font-medium"
-                                                onClick={() => toggleExpand(word.id)}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    {expandedWordId === word.id ? (
-                                                        <ChevronUp className="h-4 w-4" />
-                                                    ) : (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    )}
-                                                    <WordWithPhonetic word={word.text} />
+            {/* 单词列表 - 卡片网格视图 */}
+            {filteredWords.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                    {searchQuery ? '没有找到匹配的单词' : '还没有添加单词，点击上方按钮开始添加'}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredWords.map((word) =>
+                        word.contexts.map((ctx) => {
+                            const cardKey = `${word.id}-${ctx.id}`
+                            const isFlipped = flippedCards[cardKey]
+                            const aiData = aiContent[cardKey]
+                            const isLoading = loadingAi[cardKey]
+
+                            return (
+                                <div key={cardKey} className="relative h-[400px] w-full perspective-1000 group">
+                                    <div
+                                        className={`relative w-full h-full transition-all duration-500 transform-style-3d shadow-sm rounded-xl border bg-card text-card-foreground ${isFlipped ? 'rotate-y-180' : ''
+                                            }`}
+                                    >
+                                        {/* 正面 */}
+                                        <div className="absolute w-full h-full backface-hidden flex flex-col p-6">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <WordWithPhonetic
+                                                    wordId={word.id}
+                                                    word={word.text}
+                                                    phonetic={word.phonetic}
+                                                />
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                        onClick={() => handleFlip(word.id, ctx.id, word.text, ctx.sentence)}
+                                                        title="AI 详解"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setWordToDelete(word.id)
+                                                        }}
+                                                        title="删除单词"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell>{word.contexts.length} 个</TableCell>
-                                            <TableCell>
-                                                {new Date(word.createdAt).toLocaleDateString('zh-CN')}
-                                            </TableCell>
-                                            <TableCell className="text-right">
+                                            </div>
+
+                                            <div className="flex-1 flex flex-col justify-center space-y-6">
+                                                <div className="space-y-2 text-center">
+                                                    <div className="text-lg font-medium leading-relaxed">
+                                                        {ctx.sentence}
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 text-muted-foreground"
+                                                        onClick={() => speak(ctx.sentence, 'en-US')}
+                                                    >
+                                                        <Volume2 className="h-3 w-3 mr-1" />
+                                                        朗读
+                                                    </Button>
+                                                </div>
+
+                                                <div className="text-center">
+                                                    <div className="text-sm text-muted-foreground uppercase tracking-wider mb-1">
+                                                        释义
+                                                    </div>
+                                                    <div className="text-base">
+                                                        {ctx.meaning}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-auto pt-4 border-t flex justify-between items-center text-xs text-muted-foreground">
+                                                <span>{new Date(word.createdAt).toLocaleDateString('zh-CN')}</span>
+                                                {ctx.sourceUrl && (
+                                                    <a
+                                                        href={ctx.sourceUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="hover:underline truncate max-w-[150px]"
+                                                    >
+                                                        来源链接
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 背面 (AI 内容) */}
+                                        <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-6 bg-secondary/10 overflow-hidden">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2 text-primary font-medium">
+                                                    <Sparkles className="h-4 w-4" />
+                                                    AI 详解
+                                                </div>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => handleDelete(word.id)}
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleFlip(word.id, ctx.id, word.text, ctx.sentence)}
                                                 >
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                    <ArrowLeft className="h-4 w-4" />
                                                 </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                        {expandedWordId === word.id && (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="bg-muted/30">
-                                                    <div className="space-y-3 py-2">
-                                                        <div className="font-semibold text-sm">语境列表：</div>
-                                                        {word.contexts.map((ctx) => (
-                                                            <div
-                                                                key={ctx.id}
-                                                                className="pl-4 border-l-2 border-primary space-y-1"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="text-sm flex-1">{ctx.sentence}</div>
+                                            </div>
+
+                                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                                {isLoading ? (
+                                                    <div className="flex flex-col items-center justify-center h-full space-y-3 text-muted-foreground">
+                                                        <RotateCw className="h-6 w-6 animate-spin" />
+                                                        <span className="text-sm">AI 正在思考中...</span>
+                                                    </div>
+                                                ) : aiData ? (
+                                                    <div className="space-y-4 text-sm">
+                                                        <div className="bg-background rounded-lg p-3 shadow-sm">
+                                                            <div className="font-semibold mb-1 text-primary">核心讲解</div>
+                                                            <p className="leading-relaxed text-muted-foreground">
+                                                                {aiData.explanation}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <div className="font-semibold text-primary">拓展例句</div>
+                                                            {aiData.examples.map((ex, idx) => (
+                                                                <div key={idx} className="bg-background rounded-lg p-3 shadow-sm space-y-1">
+                                                                    <div className="text-foreground">{ex.sentence}</div>
+                                                                    <div className="text-xs text-muted-foreground">{ex.translation}</div>
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="h-6 w-6 flex-shrink-0"
-                                                                        onClick={() => speak(ctx.sentence, 'en-US')}
-                                                                        title="朗读例句"
+                                                                        className="h-5 w-5 ml-auto -mt-6"
+                                                                        onClick={() => speak(ex.sentence, 'en-US')}
                                                                     >
                                                                         <Volume2 className="h-3 w-3" />
                                                                     </Button>
                                                                 </div>
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    释义：{ctx.meaning}
-                                                                </div>
-                                                                {ctx.sourceUrl && (
-                                                                    <div className="text-xs text-muted-foreground">
-                                                                        来源：
-                                                                        <a
-                                                                            href={ctx.sourceUrl}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="text-primary hover:underline"
-                                                                        >
-                                                                            {ctx.sourceUrl}
-                                                                        </a>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                                                        加载失败
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            )}
 
             {/* 添加单词对话框 */}
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -309,6 +384,32 @@ export default function WordList() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* 删除确认对话框 */}
+            <Dialog open={!!wordToDelete} onOpenChange={(open) => !open && setWordToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>确认删除</DialogTitle>
+                        <DialogDescription>
+                            您确定要删除这个单词吗？此操作无法撤销。
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setWordToDelete(null)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                        >
+                            删除
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

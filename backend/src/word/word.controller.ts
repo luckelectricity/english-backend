@@ -7,9 +7,11 @@ import {
     Param,
     UseGuards,
     ParseIntPipe,
+    Patch,
 } from '@nestjs/common';
 import { WordService } from './word.service';
 import { CreateWordDto } from './dto/create-word.dto';
+import { UpdateWordDto } from './dto/update-word.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -39,5 +41,14 @@ export class WordController {
     @Get('oxford-progress')
     async getOxfordProgress(@CurrentUser() user) {
         return this.wordService.getOxfordProgress(user.id);
+    }
+
+    @Patch(':id')
+    async updateWord(
+        @CurrentUser() user,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateWordDto,
+    ) {
+        return this.wordService.updateWord(user.id, id, dto);
     }
 }

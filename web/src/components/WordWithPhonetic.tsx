@@ -3,26 +3,47 @@ import { Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { speak, getPhonetic } from '@/lib/speech'
 
+import { wordApi } from '@/lib/api'
+
 interface WordWithPhoneticProps {
+    wordId?: number
     word: string
+    phonetic?: string | null
     showPhonetic?: boolean
 }
 
-export default function WordWithPhonetic({ word, showPhonetic = true }: WordWithPhoneticProps) {
-    const [phonetic, setPhonetic] = useState<string | null>(null)
+export default function WordWithPhonetic({ wordId, word, phonetic: initialPhonetic, showPhonetic = true }: WordWithPhoneticProps) {
+    const [phonetic, setPhonetic] = useState<string | null>(initialPhonetic || null)
     const [isLoading, setIsLoading] = useState(false)
 
     useEffect(() => {
-        if (showPhonetic) {
+        // 如果已有音标，直接使用
+        if (initialPhonetic) {
+            setPhonetic(initialPhonetic)
+            return
+        }
+
+        if (showPhonetic && !phonetic) {
             const loadPhonetic = async () => {
                 setIsLoading(true)
-                const result = await getPhonetic(word)
-                setPhonetic(result)
-                setIsLoading(false)
+                try {
+                    const result = await getPhonetic(word)
+                    if (result) {
+                        setPhonetic(result)
+                        // 如果有 wordId，保存到数据库
+                        if (wordId) {
+                            await wordApi.update(wordId, { phonetic: result })
+                        }
+                    }
+                } catch (error) {
+                    console.error('获取音标失败:', error)
+                } finally {
+                    setIsLoading(false)
+                }
             }
             loadPhonetic()
         }
-    }, [word, showPhonetic])
+    }, [word, showPhonetic, initialPhonetic, wordId])
 
     const handleSpeak = () => {
         speak(word, 'en-US')

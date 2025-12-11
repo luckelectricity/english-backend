@@ -29,6 +29,7 @@ model User {
 model Word {
   id        Int      @id @default(autoincrement())
   text      String    
+  phonetic  String?
   userId    Int       
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   contexts  Context[]
