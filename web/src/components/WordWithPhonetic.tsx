@@ -14,16 +14,15 @@ export default function WordWithPhonetic({ word, showPhonetic = true }: WordWith
 
     useEffect(() => {
         if (showPhonetic) {
+            const loadPhonetic = async () => {
+                setIsLoading(true)
+                const result = await getPhonetic(word)
+                setPhonetic(result)
+                setIsLoading(false)
+            }
             loadPhonetic()
         }
     }, [word, showPhonetic])
-
-    const loadPhonetic = async () => {
-        setIsLoading(true)
-        const result = await getPhonetic(word)
-        setPhonetic(result)
-        setIsLoading(false)
-    }
 
     const handleSpeak = () => {
         speak(word, 'en-US')
