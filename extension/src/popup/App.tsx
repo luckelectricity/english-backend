@@ -19,7 +19,7 @@ function App() {
     try {
       const token = await storage.get('token')
       if (token) {
-        setToken(token)
+        setToken(token as string)
         fetchProfile()
       }
     } finally {

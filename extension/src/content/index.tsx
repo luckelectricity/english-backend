@@ -32,7 +32,7 @@ async function loadWords() {
     try {
         const result = await chrome.storage.local.get('learning_words');
         if (result.learning_words) {
-            words = result.learning_words;
+            words = result.learning_words as Word[];
         }
     } catch (e) {
         console.error('Failed to load words:', e);
