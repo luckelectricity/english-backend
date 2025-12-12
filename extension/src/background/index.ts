@@ -24,8 +24,53 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
     if (message.type === 'LOGIN_SUCCESS') {
         syncWords();
         sendResponse({ success: true });
+        return true; // Keep channel open
+    }
+
+    if (message.type === 'GET_PROFILE') {
+        handleGetProfile().then(sendResponse).catch(err => sendResponse({ error: err.message }));
+        return true; // Async response
+    }
+
+    if (message.type === 'AI_EXPAND') {
+        handleAiExpand(message.payload).then(sendResponse).catch(err => sendResponse({ error: err.message }));
+        return true; // Async response
     }
 });
+
+async function handleGetProfile() {
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) throw new Error('Not logged in');
+
+    const response = await fetch(`${API_URL}/auth/profile`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch profile');
+    const data = await response.json();
+    return data.data; // { user: ... }
+}
+
+async function handleAiExpand(payload: any) {
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) throw new Error('Not logged in');
+
+    const response = await fetch(`${API_URL}/ai/expand`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error('AI request failed');
+    const data = await response.json();
+    return data.data;
+}
 
 async function syncWords() {
     try {
