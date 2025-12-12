@@ -15,12 +15,22 @@ const sendToBackground = async (type: string, payload?: any) => {
 
 export const authApi = {
     getProfile: async () => {
-        return sendToBackground('GET_PROFILE') as Promise<{ user: any }>;
+        // Returns the user object directly
+        return sendToBackground('GET_PROFILE') as Promise<any>;
     }
 };
 
 export const aiApi = {
     expand: async (word: string, contextSentence: string, contextId?: number) => {
         return sendToBackground('AI_EXPAND', { word, sentence: contextSentence, contextId });
+    }
+};
+
+export const wordApi = {
+    check: async (text: string) => {
+        return sendToBackground('CHECK_WORD', { text }) as Promise<{ oxfordLevel: string | null, isCollected: boolean }>;
+    },
+    add: async (dto: { text: string; sentence: string; meaning: string; sourceUrl: string }) => {
+        return sendToBackground('ADD_WORD', dto);
     }
 };

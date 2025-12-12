@@ -36,6 +36,16 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
         handleAiExpand(message.payload).then(sendResponse).catch(err => sendResponse({ error: err.message }));
         return true; // Async response
     }
+
+    if (message.type === 'CHECK_WORD') {
+        handleCheckWord(message.payload).then(sendResponse).catch(err => sendResponse({ error: err.message }));
+        return true;
+    }
+
+    if (message.type === 'ADD_WORD') {
+        handleAddWord(message.payload).then(sendResponse).catch(err => sendResponse({ error: err.message }));
+        return true;
+    }
 });
 
 async function handleGetProfile() {
@@ -52,6 +62,45 @@ async function handleGetProfile() {
     if (!response.ok) throw new Error('Failed to fetch profile');
     const data = await response.json();
     return data.data; // { user: ... }
+}
+
+async function handleCheckWord(payload: { text: string }) {
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) return { oxfordLevel: null, isCollected: false };
+
+    const response = await fetch(`${API_URL}/words/check/${encodeURIComponent(payload.text)}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) return { oxfordLevel: null, isCollected: false };
+    const data = await response.json();
+    return data.data; // { oxfordLevel, isCollected }
+}
+
+async function handleAddWord(payload: any) {
+    console.log('[Background] handleAddWord:', payload);
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) throw new Error('Not logged in');
+
+    const response = await fetch(`${API_URL}/words`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        console.error('[Background] Add word failed:', response.status, response.statusText);
+        throw new Error('Failed to add word');
+    }
+    const data = await response.json();
+    console.log('[Background] Add word success:', data);
+    return data.data;
 }
 
 async function handleAiExpand(payload: any) {

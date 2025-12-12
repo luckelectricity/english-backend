@@ -168,5 +168,31 @@ export class WordService {
             },
         });
     }
+
+    async checkWord(userId: number, text: string) {
+        const lowerText = text.toLowerCase();
+
+        // 1. Check Oxford 3000
+        const oxfordWord = await this.prisma.oxfordWord.findFirst({
+            where: { text: lowerText },
+            select: { level: true },
+        });
+
+        // 2. Check if collected by user
+        const collectedWord = await this.prisma.word.findUnique({
+            where: {
+                text_userId: {
+                    text: lowerText,
+                    userId,
+                },
+            },
+            select: { id: true },
+        });
+
+        return {
+            oxfordLevel: oxfordWord?.level || null,
+            isCollected: !!collectedWord,
+        };
+    }
 }
 

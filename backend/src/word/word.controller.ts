@@ -51,4 +51,9 @@ export class WordController {
     ) {
         return this.wordService.updateWord(user.id, id, dto);
     }
+
+    @Get('check/:text')
+    async checkWord(@CurrentUser() user, @Param('text') text: string) {
+        return this.wordService.checkWord(user.id, text);
+    }
 }

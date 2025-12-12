@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Loader2, Sparkles, X, Brain, Lock } from 'lucide-react';
-import { aiApi, authApi } from '../lib/extension-api';
+import { Loader2, Sparkles, X, Brain, Lock, Check, Plus } from 'lucide-react';
+import { aiApi, authApi, wordApi } from '../lib/extension-api';
 // import css from '../index.css?inline'; // Removed unused css
 
 // Shadow DOM Root
@@ -26,43 +26,45 @@ const POPUP_STYLES = `
   /* Button Styles */
   .ea-trans-btn {
     position: absolute;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.04);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     outline: none;
+    z-index: 50;
   }
   .ea-trans-btn:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
   }
   .ea-trans-btn:active {
     transform: scale(0.95);
   }
   .ea-trans-btn img {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     display: block;
   }
 
   /* Panel Styles */
   .ea-panel {
     position: absolute;
-    width: 320px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    width: 340px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-radius: 16px;
     box-shadow: 
-      0 10px 40px -10px rgba(0,0,0,0.2),
-      0 0 0 1px rgba(0,0,0,0.05);
+      0 10px 40px -10px rgba(0,0,0,0.15),
+      0 2px 10px -2px rgba(0,0,0,0.05),
+      0 0 0 1px rgba(0,0,0,0.04);
     padding: 16px;
     animation: ea-fade-in 0.2s ease-out;
     box-sizing: border-box;
@@ -70,6 +72,7 @@ const POPUP_STYLES = `
     flex-direction: column;
     gap: 12px;
     color: #1e293b;
+    z-index: 50;
   }
 
   .ea-header {
@@ -77,29 +80,65 @@ const POPUP_STYLES = `
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding-bottom: 12px;
-    margin-bottom: 4px;
+    padding-bottom: 10px;
+    margin-bottom: 2px;
   }
+  
+  .ea-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .ea-header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .ea-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
     text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  
+  .ea-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
     letter-spacing: 0.5px;
   }
-  .ea-close {
+  .ea-badge-a1, .ea-badge-a2 { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .ea-badge-b1, .ea-badge-b2 { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+  .ea-badge-c1, .ea-badge-c2 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  .ea-icon-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 6px;
+    border-radius: 6px;
     color: #94a3b8;
     display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
   }
-  .ea-close:hover {
-    background: rgba(0,0,0,0.05);
+  .ea-icon-btn:hover {
+    background: rgba(0,0,0,0.04);
     color: #475569;
+  }
+  .ea-icon-btn.active {
+    background: #f0fdf4;
+    color: #16a34a;
+  }
+  .ea-icon-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
   }
 
   .ea-content {
@@ -201,6 +240,8 @@ function TranslationPopup() {
     const [aiResult, setAiResult] = useState<any>(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [user, setUser] = useState<any>(null); // { role: 'user' | 'vip' ... }
+    const [wordStatus, setWordStatus] = useState<{ oxfordLevel: string | null, isCollected: boolean } | null>(null);
+    const [adding, setAdding] = useState(false);
 
     useEffect(() => {
         // Fetch user profile on mount
@@ -252,11 +293,11 @@ function TranslationPopup() {
 
     const checkUser = async () => {
         try {
-            const { user: u } = await authApi.getProfile();
-            console.log('[TranslationPopup] User:', u);
+            const u = await authApi.getProfile();
+            console.log('[TranslationPopup] User profile fetched:', u);
             setUser(u);
         } catch (e) {
-            console.log('[TranslationPopup] Not logged in or failed to fetch profile');
+            console.log('[TranslationPopup] Not logged in or failed to fetch profile', e);
             setUser(null);
         }
     };
@@ -268,6 +309,12 @@ function TranslationPopup() {
         setShowPanel(true);
         setLoading(true);
 
+        // Check word status in parallel
+        wordApi.check(selection.text).then(res => {
+            console.log('[TranslationPopup] Check result:', res);
+            setWordStatus(res);
+        }).catch(err => console.error('[TranslationPopup] Check failed:', err));
+
         try {
             const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=${encodeURIComponent(selection.text)}`;
             const res = await fetch(url);
@@ -278,6 +325,33 @@ function TranslationPopup() {
             setGoogleResult('翻译失败');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddWord = async () => {
+        console.log('[TranslationPopup] handleAddWord clicked');
+        if (!selection) return;
+
+        const meaning = googleResult || 'Wait for translation...';
+        // Or we could just proceed if we want to save user input. 
+        // For now, let's allow saving even if translation failed or is pending, 
+        // to avoid "invalid" click feeling.
+
+        setAdding(true);
+        try {
+            console.log('[TranslationPopup] Adding word:', selection.text);
+            await wordApi.add({
+                text: selection.text,
+                sentence: selection.text, // Could be improved to capture surrounding sentence
+                meaning: meaning,
+                sourceUrl: window.location.href
+            });
+            console.log('[TranslationPopup] Word added successfully');
+            setWordStatus(prev => prev ? { ...prev, isCollected: true } : { oxfordLevel: null, isCollected: true });
+        } catch (e) {
+            console.error('[TranslationPopup] Failed to add word', e);
+        } finally {
+            setAdding(false);
         }
     };
 
@@ -312,6 +386,7 @@ function TranslationPopup() {
     }
 
     const isVip = user && ['vip', 'vvip', 'admin'].includes(user.role);
+    console.log('[TranslationPopup] Render - isVip:', isVip, 'User:', user);
 
     return (
         <>
@@ -325,6 +400,7 @@ function TranslationPopup() {
                         handleGoogleTranslate();
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
                 >
                     <img src="https://upload.wikimedia.org/wikipedia/commons/d/d7/Google_Translate_logo.svg" alt="Translate" />
                 </button>
@@ -335,13 +411,35 @@ function TranslationPopup() {
                     className="ea-panel"
                     style={panelStyle}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="ea-header">
-                        <span className="ea-title">Google 翻译</span>
-                        <button onClick={() => setShowPanel(false)} className="ea-close">
-                            <X size={16} />
-                        </button>
+                        <div className="ea-header-left">
+                            <span className="ea-title">Google 翻译</span>
+                            {wordStatus?.oxfordLevel && (
+                                <span className={`ea-badge ea-badge-${wordStatus.oxfordLevel.toLowerCase()}`}>
+                                    {wordStatus.oxfordLevel}
+                                </span>
+                            )}
+                        </div>
+                        <div className="ea-header-right">
+                            {wordStatus && (
+                                <button
+                                    onClick={handleAddWord}
+                                    disabled={wordStatus.isCollected || adding}
+                                    className={`ea-icon-btn ${wordStatus.isCollected ? 'active' : ''}`}
+                                    title={wordStatus.isCollected ? "Saved to Wordbook" : "Add to Wordbook"}
+                                >
+                                    {adding ? <Loader2 size={16} className="animate-spin" /> : (
+                                        wordStatus.isCollected ? <Check size={16} /> : <Plus size={18} />
+                                    )}
+                                </button>
+                            )}
+                            <button onClick={() => setShowPanel(false)} className="ea-icon-btn">
+                                <X size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="ea-content">
