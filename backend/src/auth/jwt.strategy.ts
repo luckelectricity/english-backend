@@ -39,6 +39,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 name: true,
                 role: true,
                 createdAt: true,
+                _count: {
+                    select: {
+                        words: true
+                    }
+                }
             },
         });
     }
