@@ -154,6 +154,11 @@ async function syncWords() {
             words = data;
         }
 
+        console.log(`[Background] Backend returned ${words.length} words.`);
+        if (words.length > 0) {
+            console.log('[Background] Sample word:', words[0]);
+        }
+
         await chrome.storage.local.set({
             learning_words: words,
             last_sync: Date.now()

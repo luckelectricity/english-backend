@@ -357,10 +357,31 @@ function TranslationPopup() {
 
     const handleAiAnalyze = async () => {
         if (!selection) return;
+
+        // Cache Key
+        const cacheKey = `ea_ai_cache_${selection.text.trim().toLowerCase()}`;
+        const cached = localStorage.getItem(cacheKey);
+
+        if (cached) {
+            try {
+                console.log('[TranslationPopup] Cache hit for AI result');
+                setAiResult(JSON.parse(cached));
+                return;
+            } catch (e) {
+                console.warn('Invalid cache', e);
+                localStorage.removeItem(cacheKey);
+            }
+        }
+
         setAiLoading(true);
         try {
             const data = await aiApi.expand(selection.text, selection.text);
             setAiResult(data);
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Failed to cache AI result (storage full?)', e);
+            }
         } catch (e) {
             console.error(e);
         } finally {

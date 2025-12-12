@@ -6,6 +6,7 @@ console.log('[English Assistant] Content script loaded');
 interface Word {
     id: number;
     text: string;
+    status: number; // 0: learning, 1: mastered
     contexts?: { meaning: string }[];
 }
 
@@ -32,7 +33,10 @@ async function loadWords() {
     try {
         const result = await chrome.storage.local.get('learning_words');
         if (result.learning_words) {
-            words = result.learning_words as Word[];
+            // Filter out mastered words (status === 1)
+            const allWords = result.learning_words as Word[];
+            words = allWords.filter(w => w.status !== 1);
+            console.log(`[English Assistant] Loaded ${words.length} learning words (filtered ${allWords.length - words.length} mastered)`);
         }
     } catch (e) {
         console.error('Failed to load words:', e);

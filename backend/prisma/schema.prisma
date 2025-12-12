@@ -35,6 +35,7 @@ model Word {
   contexts  Context[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  status    Int      @default(0) // 0: learning, 1: mastered
   
   @@unique([text, userId]) // 同一用户的单词不重复
   @@index([userId])
